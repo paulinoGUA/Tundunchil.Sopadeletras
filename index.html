@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>¿Cuántas Palabras Sabes Sobre los Tundunchil?</title>
+
+  <style>
+    body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+        
+        /* CONTENEDOR PRINCIPAL: Define el diseño como una columna vertical */
+        .main-content {
+            display: flex;
+            flex-direction: column; /* Esto fuerza el apilamiento: Sopa, luego Opciones */
+            align-items: center;
+            gap: 30px;
+            max-width: 600px; /* Limita el ancho del contenedor principal */
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #word-search-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            grid-template-rows: repeat(16, 1fr);
+            width: 550px;
+            height: 550px;
+            border: 2px solid #333;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.1s;
+        }
+        .selected {
+            background-color: #a2d2ff;
+        }
+        .found {
+            background-color: #bfff00;
+            color: #333;
+        }
+
+        /* Contenedor que junta Controles y Lista DEBAJO de la cuadrícula */
+        .options-container {
+            display: flex;
+            flex-direction: row; /* Controles y lista Irán lado a lado DEBAJO de la sopa */
+            justify-content: space-between;
+            gap: 20px;
+            width: 550px; /* Asegura que ocupe el mismo ancho que la cuadrícula */
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 250px; 
+            flex-shrink: 0; /* Evita que se encoja */
+        }
+        .word-list-container {
+            flex-grow: 1; /* Permite que la lista de palabras ocupe el espacio restante */
+        }
+
+        #word-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px 15px;
+            align-content: flex-start;
+        }
+        #word-list li {
+            font-size: 1em;
+            width: calc(50% - 10px); /* Dos palabras por fila */
+        }
+        .marked {
+            text-decoration: line-through;
+            color: #888;
+        }
+        #timer, #feedback {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        #timer {
+            background-color: #ffe8d6;
+        }
+        #feedback {
+            background-color: #e0f7fa;
+            min-height: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover:not(:disabled) {
+            background-color: #005f99;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .stars {
+            font-size: 2em;
+            color: gold;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        /* Ajuste responsivo para móviles */
+        @media (max-width: 600px) {
+            #word-search-grid, .options-container {
+                width: 350px; /* Cuadrícula y opciones más pequeñas en móviles */
+                height: 350px;
+            }
+            .cell {
+                font-size: 0.7em;
+            }
+            .options-container {
+                flex-direction: column; /* Apila controles y lista en móviles */
+                height: auto;
+            }
+            .controls {
+                width: 100%;
+            }
+            #word-list li {
+                width: 100%; /* Una palabra por fila en móviles */
+            }
+        }
+  </style>
+
+  
+</head>
+<body>
+  <h1>¿Cuántas Palabras Sabes Sobre los Tundunchil?</h1>
+
+    <div class="main-content">
+        
+        <div id="word-search-grid">
+        </div>
+
+        <div class="options-container">
+            <div class="controls">
+                <div id="timer">Tiempo: 00:00</div>
+                
+                <div class="button-group">
+                    <button id="start-button">Iniciar Juego</button>
+                    <button id="reset-button" disabled>Volver a Intentar</button>
+                </div>
+                
+                <button id="verify-button" disabled>Verificar y Calificar</button>
+                <div id="feedback">Presiona "Iniciar Juego" para comenzar.</div>
+            </div>
+            
+            <div class="word-list-container">
+                <h2>Palabras a Encontrar (17):</h2>
+                <ul id="word-list">
+                </ul>
+            </div>
+        </div>
+    </div>
+
+  <script>
+    // --- 1. CONFIGURACIÓN DEL JUEGO ---
+        const GRID_SIZE = 16;
+        const words = [
+            { word: "MAMADANZA", found: false },
+            { word: "WAWADANZA", found: false },
+            { word: "INTI", found: false },
+            { word: "DANZANTE", found: false },
+            { word: "PINKULLU", found: false },
+            { word: "BOMBO", found: false },
+            { word: "QUIPA", found: false },
+            { word: "CASCABELES", found: false },
+            { word: "VARA", found: false },
+            { word: "CHUMPI", found: false },
+            { word: "CUSHMA", found: false },
+            { word: "POLLERIN", found: false },
+            { word: "PAÑUELO", found: false },
+            { word: "POLAINAS", found: false },
+            { word: "ALFANJE", found: false },
+            { word: "ROSARIO", found: false },
+            { word: "CORPUSCHRISTI", found: false }
+        ];
+
+        // Posiciones de las palabras (ajustadas a la nueva cuadrícula 16x16)
+        const wordPositions = [
+            // Fila | Columna
+            { word: "MAMADANZA", start: [1, 1], end: [1, 9] },       // Horizontal
+            { word: "WAWADANZA", start: [1, 13], end: [9, 13] },     // Vertical
+            { word: "INTI", start: [15, 12], end: [15, 15] },         // Horizontal
+            { word: "DANZANTE", start: [0, 8], end: [7, 15] },       // Diagonal
+            { word: "PINKULLU", start: [13, 0], end: [13, 7] },      // Horizontal
+            { word: "BOMBO", start: [11, 15], end: [11, 11] },       // Horizontal Invertida
+            { word: "QUIPA", start: [6, 0], end: [6, 4] },           // Horizontal
+            { word: "CASCABELES", start: [14, 0], end: [14, 9] },    // Horizontal
+            { word: "VARA", start: [15, 0], end: [12, 3] },          // Diagonal Invertida
+            { word: "CHUMPI", start: [0, 0], end: [5, 0] },          // Vertical
+            { word: "CUSHMA", start: [5, 15], end: [0, 15] },        // Vertical Invertida
+            { word: "POLLERIN", start: [3, 4], end: [3, 11] },       // Horizontal
+            { word: "PAÑUELO", start: [9, 1], end: [3, 7] },         // Diagonal Invertida
+            { word: "POLAINAS", start: [8, 15], end: [15, 8] },      // Diagonal
+            { word: "ALFANJE", start: [11, 0], end: [5, 6] },        // Diagonal Invertida
+            { word: "ROSARIO", start: [12, 10], end: [6, 10] },      // Vertical Invertida
+            { word: "CORPUSCHRISTI", start: [7, 0], end: [7, 12] }   // Horizontal
+        ];
+
+        let grid = [];
+        let originalWordsState = JSON.parse(JSON.stringify(words));
+
+        // --- Funciones de inicialización y reinicio ---
+
+        // Función que rellena la cuadrícula con palabras y letras aleatorias
+        function generateGrid() {
+            grid = Array(GRID_SIZE).fill(0).map(() => Array(GRID_SIZE).fill(''));
+
+            // 1. Rellenar la cuadrícula con las palabras
+            wordPositions.forEach(pos => {
+                let [r, c] = pos.start;
+                let [dr, dc] = [
+                    Math.sign(pos.end[0] - pos.start[0]),
+                    Math.sign(pos.end[1] - pos.start[1])
+                ];
+
+                for (let i = 0; i < pos.word.length; i++) {
+                    // Se asegura de que no se salga de los límites (aunque debería estar controlado por pos.end)
+                    if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
+                        grid[r][c] = pos.word[i];
+                    }
+                    r += dr;
+                    c += dc;
+                }
+            });
+
+            // 2. Rellenar espacios vacíos con letras aleatorias
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÑ';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (grid[r][c] === '') {
+                        grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+                    }
+                }
+            }
+        }
+
+        // --- 2. LÓGICA DEL JUEGO ---
+        const gridElement = document.getElementById('word-search-grid');
+        const wordListElement = document.getElementById('word-list');
+        const verifyButton = document.getElementById('verify-button');
+        const feedbackElement = document.getElementById('feedback');
+        const timerElement = document.getElementById('timer');
+        const startButton = document.getElementById('start-button');
+        const resetButton = document.getElementById('reset-button');
+
+        let gameWords = JSON.parse(JSON.stringify(originalWordsState));
+        let selectedCells = [];
+        let isDrawing = false;
+        let timerInterval;
+        let seconds = 0;
+        let isGameOver = true;
+
+        // Inicia o reinicia el temporizador
+        function startTimer() {
+            clearInterval(timerInterval);
+            seconds = 0;
+            timerElement.textContent = `Tiempo: 00:00`;
+            timerInterval = setInterval(() => {
+                seconds++;
+                let mins = Math.floor(seconds / 60);
+                let secs = seconds % 60;
+                timerElement.textContent = `Tiempo: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        // Dibuja la cuadrícula en el DOM
+        function drawGrid() {
+            gridElement.innerHTML = '';
+            grid.forEach((row, r) => {
+                row.forEach((char, c) => {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.textContent = char;
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    gridElement.appendChild(cell);
+                });
+            });
+        }
+
+        // Dibuja la lista de palabras
+        function drawWordList() {
+            wordListElement.innerHTML = gameWords.map(w => `<li id="word-${w.word}">${w.word}</li>`).join('');
+        }
+
+        // --- 3. MANEJO DE EVENTOS ---
+
+        function handleSelection(event) {
+            if (isGameOver) return;
+            const cell = event.target.closest('.cell');
+            if (!cell) return;
+
+            if (event.type === 'mousedown') {
+                isDrawing = true;
+                // Limpiar selección anterior si no es una celda ya encontrada
+                document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+                selectedCells = [cell];
+                cell.classList.add('selected');
+            } else if (event.type === 'mouseover' && isDrawing) {
+                if (!cell.classList.contains('found')) {
+                    // Al entrar en una nueva celda, recalcula la línea completa
+                    const newSelection = getCellsInLine(selectedCells[0], cell);
+
+                    // Desmarcar celdas que ya no están en la línea
+                    selectedCells.forEach(c => c.classList.remove('selected'));
+
+                    selectedCells = newSelection;
+                    selectedCells.forEach(c => c.classList.add('selected'));
+                }
+            } else if (event.type === 'mouseup') {
+                isDrawing = false;
+                if (selectedCells.length > 0) {
+                    checkWord();
+                }
+            }
+        }
+
+        // Función para obtener todas las celdas entre el inicio y el fin (para mejorar la UX)
+        function getCellsInLine(startCell, endCell) {
+            const r1 = parseInt(startCell.dataset.row);
+            const c1 = parseInt(startCell.dataset.col);
+            const r2 = parseInt(endCell.dataset.row);
+            const c2 = parseInt(endCell.dataset.col);
+
+            const rowDiff = Math.abs(r1 - r2);
+            const colDiff = Math.abs(c1 - c2);
+
+            // Si no es horizontal (rowDiff=0), vertical (colDiff=0), o diagonal (rowDiff=colDiff), no es una línea recta válida
+            if (rowDiff !== 0 && colDiff !== 0 && rowDiff !== colDiff) {
+                return [startCell]; // Si no es recto, solo mantener la celda inicial
+            }
+
+            const cells = [startCell];
+            let r = r1, c = c1;
+            const dr = Math.sign(r2 - r1);
+            const dc = Math.sign(c2 - c1);
+
+            while (r !== r2 || c !== c2) {
+                r += dr;
+                c += dc;
+                if (r >= 0 && r < GRID_SIZE && c >= 0 && c < GRID_SIZE) {
+                    const nextCell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+                    if (nextCell) cells.push(nextCell);
+                } else {
+                    break;
+                }
+            }
+            return cells;
+        }
+
+        // --- 4. VERIFICACIÓN Y CALIFICACIÓN ---
+
+        function checkWord() {
+            // Limpiar selección si solo se ha hecho clic en una celda
+            if (selectedCells.length <= 1) {
+                selectedCells.forEach(c => c.classList.remove('selected'));
+                selectedCells = [];
+                return;
+            }
+
+            const r_start = parseInt(selectedCells[0].dataset.row);
+            const c_start = parseInt(selectedCells[0].dataset.col);
+            const r_end = parseInt(selectedCells[selectedCells.length - 1].dataset.row);
+            const c_end = parseInt(selectedCells[selectedCells.length - 1].dataset.col);
+
+            let foundWordObject = null;
+            let isReversed = false;
+
+            // Usar wordPositions para verificar la ubicación
+            for (const pos of wordPositions) {
+                const wordObj = gameWords.find(w => w.word === pos.word);
+                if (!wordObj || wordObj.found) continue; // Ignorar si ya se encontró
+
+                // 1. Comprobar dirección directa
+                if (pos.start[0] === r_start && pos.start[1] === c_start &&
+                    pos.end[0] === r_end && pos.end[1] === c_end) {
+                    foundWordObject = wordObj;
+                    isReversed = false;
+                    break;
+                }
+                // 2. Comprobar dirección inversa
+                if (pos.start[0] === r_end && pos.start[1] === c_end &&
+                    pos.end[0] === r_start && pos.end[1] === c_start) {
+                    foundWordObject = wordObj;
+                    isReversed = true;
+                    break;
+                }
+            }
+
+            if (foundWordObject) {
+                // Palabra correcta y no encontrada previamente
+                foundWordObject.found = true;
+                selectedCells.forEach(cell => {
+                    cell.classList.remove('selected');
+                    cell.classList.add('found');
+                });
+
+                document.getElementById(`word-${foundWordObject.word}`).classList.add('marked');
+                feedbackElement.textContent = `¡Encontraste la palabra "${foundWordObject.word.toUpperCase()}"!`;
+
+                // Verificar si todas las palabras han sido encontradas
+                if (gameWords.every(w => w.found)) {
+                    verifyAndGrade(true); // Calificación automática si se encuentran todas
+                }
+            } else {
+                // Palabra incorrecta o ya encontrada (según la posición)
+                selectedCells.forEach(cell => cell.classList.remove('selected'));
+                feedbackElement.textContent = 'Inténtalo de nuevo. Asegúrate de seleccionar el principio y el final exactos.';
+            }
+            selectedCells = [];
+        }
+
+        function verifyAndGrade(auto = false) {
+            if (isGameOver && !auto) return;
+            isGameOver = true;
+            clearInterval(timerInterval);
+
+            const wordsFound = gameWords.filter(w => w.found).length;
+            const totalWords = gameWords.length;
+            const percentage = (wordsFound / totalWords) * 100;
+            let stars = '';
+            let message = '';
+
+            if (percentage === 100) {
+                stars = '⭐️⭐️⭐️';
+                message = `¡Felicidades! Encontraste las ${totalWords} palabras en ${timerElement.textContent.replace('Tiempo: ', '')}. ¡Eres un experto en el Tundunchil!`;
+            } else if (percentage >= 75) {
+                stars = '⭐️⭐️';
+                message = `¡Muy bien! Encontraste ${wordsFound} de ${totalWords} palabras en ${timerElement.textContent.replace('Tiempo: ', '')}.`;
+            } else if (percentage >= 50) {
+                stars = '⭐️';
+                message = `Buen inicio. Encontraste ${wordsFound} de ${totalWords} palabras. Sigue practicando.`;
+            } else {
+                stars = '😔';
+                message = `Encontraste ${wordsFound} de ${totalWords} palabras. Repasa el vocabulario y vuelve a intentarlo.`;
+            }
+
+            feedbackElement.innerHTML = `<div class="stars">${stars}</div> ${message}`;
+            verifyButton.disabled = true;
+            resetButton.disabled = false;
+            gridElement.style.pointerEvents = 'none';
+            gridElement.style.opacity = '0.5';
+        }
+
+        // --- 5. CONTROL DE JUEGO ---
+
+        function startGame() {
+            isGameOver = false;
+            // Reiniciar estado de las palabras por si se reinicia sin resetear la página
+            gameWords = JSON.parse(JSON.stringify(originalWordsState));
+            generateGrid();
+            drawGrid();
+            drawWordList();
+            startTimer();
+            feedbackElement.textContent = '¡Busca las palabras y haz clic y arrastra para marcarlas!';
+            startButton.disabled = true;
+            resetButton.disabled = true;
+            verifyButton.disabled = false;
+            gridElement.style.pointerEvents = 'auto';
+            gridElement.style.opacity = '1';
+        }
+
+        function resetGame() {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            seconds = 0;
+            timerElement.textContent = `Tiempo: 00:00`;
+            gameWords = JSON.parse(JSON.stringify(originalWordsState)); // Reiniciar estado
+            generateGrid(); // Vuelve a generar por si quieres cambiar las letras de relleno
+            drawGrid(); // Limpiar celdas encontradas
+            drawWordList(); // Limpiar palabras marcadas
+            feedbackElement.textContent = 'Presiona "Iniciar Juego" para comenzar.';
+            startButton.disabled = false;
+            resetButton.disabled = true;
+            verifyButton.disabled = true;
+            gridElement.style.pointerEvents = 'none';
+            gridElement.style.opacity = '0.5';
+        }
+
+        // --- 6. INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ejecutar reset al cargar para establecer el estado inicial correcto
+            resetGame();
+
+            // Asignar eventos al contenedor del tablero
+            gridElement.addEventListener('mousedown', handleSelection);
+            gridElement.addEventListener('mouseover', handleSelection);
+            gridElement.addEventListener('mouseup', handleSelection);
+
+            // Asignar eventos a los botones de control
+            startButton.addEventListener('click', startGame);
+            resetButton.addEventListener('click', resetGame);
+            verifyButton.addEventListener('click', () => verifyAndGrade(false));
+        });
+  </script>
+</body>
+</html>
